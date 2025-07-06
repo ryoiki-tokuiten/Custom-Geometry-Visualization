@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geometric Proof Visualizer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.1/math.min.js"></script>
+  <script src="https://d3js.org/d3-selection.v3.min.js"></script>
+  <script src="https://d3js.org/d3-zoom.v3.min.js"></script>
+  <style>
+    /* General Styles */
+    body {
+        font-family: 'SF Pro Rounded', SF Pro Display, Geneva, Verdana, sans-serif;
+        background: linear-gradient(125deg, #101828, #0f1419, #151a27);
+        color: #ffffff;
+        position: relative;
+        margin: 0;
+        padding: 0;
+        height: 100vh; 
+        overflow: hidden; 
+        display: flex; 
+        flex-direction: column; 
+    }
+
+    /* Background Dots */
+    body::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: 
+            radial-gradient(#ffffff18 1px, transparent 1px),
+            radial-gradient(#ffffff0a 1.5px, transparent 1.5px);
+        background-size: 28px 28px, 80px 80px;
+        background-position: 0 0, 14px 14px;
+        pointer-events: none;
+        z-index: -1; /* Ensure it's behind #root content */
+    }
+
+    /* Section Headings */
+    h6.section-title {
+        color: #ffffff;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .section-indicator {
+        width: 5px;
+        height: 18px;
+        background: linear-gradient(to bottom, #a971ff, #7facff);
+        border-radius: 3px;
+        display: inline-block;
+        margin-right: 0.5rem;
+        box-shadow: 0 2px 4px rgba(168, 121, 255, 0.3);
+    }
+
+    /* Card Styles */
+    .card {
+        margin-bottom: 1rem; 
+        background: rgba(16, 19, 28, 0.85);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border: 1px solid rgba(130, 130, 180, 0.15);
+        border-radius: 0.75rem;
+        overflow: hidden;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        position: relative;
+        z-index: 1;
+        display: flex; 
+        flex-direction: column;
+    }
+
+    .card::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: 
+            radial-gradient(#ffffff10 0.8px, transparent 0.8px),
+            radial-gradient(circle at 15% 85%, rgba(168, 121, 255, 0.08), transparent 20%),
+            radial-gradient(circle at 85% 15%, rgba(66, 133, 244, 0.06), transparent 20%);
+        background-size: 24px 24px, 100% 100%, 100% 100%;
+        pointer-events: none;
+        z-index: -1;
+    }
+
+    .card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, 
+            rgba(128, 140, 156, 0) 0%, 
+            rgba(168, 121, 255, 0.3) 25%, 
+            rgba(168, 121, 255, 0.3) 75%, 
+            rgba(128, 140, 156, 0) 100%);
+        z-index: 5;
+    }
+
+    .card-header {
+        background: rgba(17, 21, 30, 0.8);
+        border-bottom: 1px solid rgba(130, 130, 180, 0.15);
+        padding: 0.85rem 1.15rem;
+        color: #ffffff;
+        position: relative;
+        z-index: 1;
+        flex-shrink: 0; /* Prevent header from shrinking */
+    }
+
+    .card-body {
+        padding: 1.15rem; 
+        position: relative;
+        z-index: 1;
+        flex-grow: 1; 
+        overflow-y: auto; /* Make card body scrollable if content overflows */
+    }
+
+    .card-title { 
+        color: #ffffff;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        margin: 0;
+        font-size: 1.1rem; 
+    }
+    
+    /* Form Elements */
+    .form-control, .form-select {
+        background: rgba(19, 23, 35, 0.7);
+        border: 1px solid rgba(130, 130, 180, 0.2);
+        color: #ffffff;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        padding: 0.6rem 0.85rem;
+        border-radius: 0.375rem; 
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .form-control:disabled, .form-select:disabled {
+        background: rgba(19, 23, 35, 0.4);
+        border-color: rgba(130, 130, 180, 0.1);
+        color: rgba(255, 255, 255, 0.5);
+        cursor: not-allowed;
+    }
+
+
+    .form-control::placeholder { color: rgba(255, 255, 255, 0.7); opacity: 1; }
+    .form-control:-ms-input-placeholder { color: rgba(255, 255, 255, 0.7); }
+    .form-control::-ms-input-placeholder { color: rgba(255, 255, 255, 0.7); }
+
+    .form-control:focus, .form-select:focus {
+        background: rgba(25, 30, 45, 0.8);
+        border-color: rgba(168, 121, 255, 0.5);
+        color: #ffffff;
+        box-shadow: 0 0 0 0.25rem rgba(168, 121, 255, 0.15);
+        outline: none;
+    }
+
+    .form-text { 
+        color: #d0d7e2 !important;
+        font-weight: 400;
+        font-size: 0.85rem; 
+        line-height: 1.5;
+        margin-top: 0.25rem;
+        display: block;
+    }
+    .explanation-content .form-text { /* Specific to explanation content area */
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem; 
+    }
+
+
+    .form-label {
+        color: #ffffff;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+     .form-label.disabled {
+        color: rgba(255,255,255,0.5);
+    }
+    
+    input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 8px;
+        background: rgba(35, 40, 54, 0.5); 
+        border-radius: 5px;
+        outline: none;
+        opacity: 0.8;
+        transition: opacity .2s;
+        cursor: pointer;
+        padding: 0; 
+    }
+    input[type="range"]:hover { opacity: 1; }
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        background: #a971ff; 
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid rgba(16, 19, 28, 0.85); 
+        box-shadow: 0 2px 4px rgba(168, 121, 255, 0.3);
+        margin-top: -5px; 
+    }
+    input[type="range"]::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        background: #a971ff;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid rgba(16, 19, 28, 0.85);
+        box-shadow: 0 2px 4px rgba(168, 121, 255, 0.3);
+    }
+    input[type="range"]::-ms-thumb {
+        width: 18px;
+        height: 18px;
+        background: #a971ff;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid rgba(16, 19, 28, 0.85);
+        box-shadow: 0 2px 4px rgba(168, 121, 255, 0.3);
+    }
+    input[type="range"]:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    input[type="range"]:disabled::-webkit-slider-thumb {
+        background: #7f8c8d;
+        cursor: not-allowed;
+    }
+    input[type="range"]:disabled::-moz-range-thumb {
+        background: #7f8c8d;
+        cursor: not-allowed;
+    }
+
+
+    /* Checkbox styling */
+    .form-check {
+      display: flex;
+      align-items: center;
+      margin-top: 0.75rem;
+      margin-bottom: 0.75rem;
+      padding: 0.5rem 0.1rem;
+    }
+    .form-check-input {
+      width: 1.1em; 
+      height: 1.1em; 
+      margin-right: 0.6rem; 
+      accent-color: #a971ff; 
+      background-color: rgba(19, 23, 35, 0.7); 
+      border: 1px solid rgba(130, 130, 180, 0.2);
+      border-radius: 0.25em; /* Default slightly rounded square */
+      cursor: pointer;
+      vertical-align: middle; 
+      position: relative; 
+      top: -0.05em; 
+    }
+    .form-check-input:checked {
+        background-color: #a971ff; /* Uses accent-color by default */
+        border-color: #a971ff;
+    }
+    .form-check-label {
+      color: #d0d7e2; 
+      font-weight: 400; 
+      margin-bottom: 0; 
+      cursor: pointer;
+      font-size: 0.9rem; 
+      line-height: 1.5;
+    }
+
+    /* Circular Checkbox Styling */
+    .form-check-circular .form-check-input {
+        -webkit-appearance: none;
+        appearance: none;
+        border-radius: 50%; /* Makes the checkbox circular */
+        /* Inherits width, height, margin, default background-color, default border from .form-check-input */
+    }
+    .form-check-circular .form-check-input:checked {
+        background-color: #a971ff; /* Checked background color */
+        border-color: #a971ff; /* Match border color for a solid feel */
+        background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3ccircle cx='8' cy='8' r='3'/%3e%3c/svg%3e");
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+    .form-check-circular .form-check-input:focus-visible {
+        outline: none; /* Remove default outline if any */
+        box-shadow: 0 0 0 3px rgba(168, 121, 255, 0.35); /* Custom focus glow */
+    }
+    
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: rgba(19, 23, 35, 0.5); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb { background: rgba(130, 130, 180, 0.3); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(168, 121, 255, 0.5); }
+
+    /* App Layout Styles */
+    #root {
+      display: flex;
+      flex-direction: column;
+      height: 100%; 
+      flex-grow: 1; /* Allow #root to grow */
+    }
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+      position: relative; 
+      z-index: 1; /* Ensure app-container content is above body::before */
+      overflow: hidden; 
+    }
+    .app-header {
+      flex-shrink: 0;
+      text-align: center;
+    }
+    .app-header h1, .app-header h2 { display: none; }
+    
+    .content-wrapper {
+      flex-grow: 1; 
+      display: flex;
+      flex-direction: column; 
+      overflow: hidden; 
+      padding: 1rem; 
+      position: relative; /* For positioning toggle button */
+    }
+
+    .main-content-area {
+      flex-grow: 1;
+      display: flex;
+      gap: 1rem; 
+      overflow: hidden; 
+      min-height: 0; 
+    }
+    .controls-column {
+      width: 24rem; 
+      flex-shrink: 0; 
+      display: flex; 
+      flex-direction: column;
+      max-height: 100%; 
+      transition: width 0.3s ease-in-out, opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+      transform: translateX(0);
+      opacity: 1;
+    }
+    .controls-column.hidden {
+        width: 0;
+        opacity: 0;
+        transform: translateX(-100%);
+        pointer-events: none;
+        /* Add margin-right: -1rem; or adjust gap on parent if needed to reclaim space */
+        margin-right: -1rem; /* To compensate for the gap when hidden */
+        overflow: hidden;
+    }
+
+    .controls-column > .card {
+      flex-grow: 1; 
+      margin-bottom: 0; 
+    }
+
+    .canvas-column { 
+      flex-grow: 1;
+      display: flex; 
+      flex-direction: column;
+      min-width: 0; 
+      max-height: 100%; 
+      transition: flex-grow 0.3s ease-in-out;
+    }
+    .canvas-column > .card {
+      flex-grow: 1; 
+      margin-bottom: 0;
+    }
+    .canvas-column > .card > .card-body {
+      padding: 0; 
+      display: flex; 
+      overflow: hidden; 
+      /* position: relative; /* Already on .card-body, needed for absolute children like the new HTML box */
+    }
+    .canvas-column > .card > .card-body > svg {
+      flex-grow: 1;
+      width: 100%;
+      height: 100%;
+      border-radius: 0.5rem; 
+    }
+
+    @media (max-width: 1023px) { 
+      .main-content-area {
+        flex-direction: column;
+      }
+      .controls-column {
+        width: 100%;
+        margin-bottom: 1rem; 
+        max-height: 45vh; 
+        min-height: 200px; 
+        transform: translateY(0); /* Reset transform for vertical layout */
+      }
+      .controls-column.hidden {
+        height: 0;
+        width: 100%; /* Ensure it takes up width before collapsing height */
+        max-height: 0;
+        opacity: 0;
+        transform: translateY(-100%);
+        margin-bottom: -1rem; /* Compensate for gap */
+        overflow: hidden;
+      }
+      .canvas-column {
+         min-height: 300px; 
+         max-height: 50vh; 
+      }
+    }
+
+    .app-footer {
+      flex-shrink: 0;
+      text-align: center;
+      font-size: 0.8rem; 
+      color: #d0d7e2 !important;
+    }
+    .app-footer p { display: none; } 
+
+    /* ControlsPanel Specific Styles */
+    .controls-panel-inner > div:not(:last-child) { 
+      margin-bottom: 1.25rem; 
+    }
+    .value-group {
+      margin-bottom: 1rem; 
+      padding: 1rem; 
+      background: rgba(19, 23, 35, 0.75); 
+      border: 1px solid rgba(130, 130, 180, 0.1); 
+      border-radius: 0.5rem; 
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .value-group-title {
+      color: #A971FF; 
+      font-weight: 500;
+      font-size: 1.05rem; 
+      margin-bottom: 0.75rem; 
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(130, 130, 180, 0.1);
+    }
+    .value-item { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      font-size: 0.85rem; 
+      margin-bottom: 0.4rem; 
+      padding: 0.2rem 0;
+    }
+    .value-key { 
+      font-family: 'SF Pro Rounded', SF Pro Display, Geneva, Verdana, sans-serif; 
+      color: #E8EEFF; 
+      text-transform: capitalize; 
+      margin-right: 0.5rem;
+    }
+    .value-data { 
+      font-family: 'SF Pro Rounded', SF Pro Display, Geneva, Verdana, sans-serif; 
+      font-weight: 500; 
+      padding: 0.1rem 0.4rem; 
+      border-radius: 3px; 
+      background-color: rgba(255,255,255,0.05); 
+    }
+    .slider-param-value {
+        color: #A971FF; 
+        font-weight: 500;
+    }
+    .controls-panel-inner .form-text { 
+        font-size: 0.75rem;
+        color: #b0b8c8 !important; 
+    }
+    .radians-text {
+        font-size: 0.75rem;
+        color: #b0b8c8 !important;
+        margin-top: 0.25rem;
+    }
+    
+    /* LaTeX-like styling (can be used in HTML explanation box too) */
+    .formula {
+        font-family: 'Computer Modern', 'SF Pro Rounded', SF Pro Display, Cambria, 'Times New Roman', serif;
+        font-style: italic;
+        color: #E8EEFF;
+    }
+    .formula .text-normal { 
+        font-style: normal;
+    }
+    .formula sup, .formula sub {
+        line-height: 0;
+        position: relative;
+        vertical-align: baseline;
+    }
+    .formula sup { top: -0.5em; }
+    .formula sub { bottom: -0.25em; }
+
+    /* Specific sub/sup for HTML explanation box for better control */
+    .integral-explanation-box-html sub, 
+    .integral-explanation-box-html sup {
+        font-size: 0.9em; /* Smaller than main text */
+        line-height: 0;
+        position: relative;
+        vertical-align: baseline;
+    }
+    .integral-explanation-box-html sup { top: -0.5em; }
+    .integral-explanation-box-html sub { bottom: -0.25em; }
+
+    .formula .fraction {
+        display: inline-block;
+        vertical-align: middle;
+        text-align: center;
+    }
+    .formula .fraction > sup { display: block; top: -0.1em; }
+    .formula .fraction > sub { display: block; bottom: -0.1em; }
+    .formula .frac-line {
+        border-top: 1px solid currentColor;
+        display: block;
+        margin: 0.1em 0;
+    }
+    .formula .radical {
+        font-size: 1.2em; 
+    }
+    .formula .overline {
+        text-decoration: overline;
+    }
+
+    /* Explanation Section within Controls Panel */
+    .explanation-toggle-button {
+        background-color: rgba(40, 45, 60, 0.7);
+        color: #A971FF;
+        border: 1px solid rgba(168, 121, 255, 0.3);
+        padding: 0.5rem 0.85rem;
+        border-radius: 0.375rem;
+        cursor: pointer;
+        text-align: left;
+        width: 100%;
+        margin-top: 1rem; 
+        margin-bottom: 0.5rem; 
+        font-weight: 500;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .explanation-toggle-button:hover {
+        background-color: rgba(50, 55, 70, 0.8);
+    }
+    .explanation-toggle-button .toggle-icon {
+        transition: transform 0.2s ease-in-out;
+    }
+    .explanation-toggle-button .toggle-icon.expanded {
+        transform: rotate(180deg);
+    }
+
+    .explanation-content-wrapper {
+        border: 1px solid rgba(130, 130, 180, 0.1);
+        border-radius: 0.5rem;
+        margin-top: 0.5rem; 
+        overflow: hidden; 
+    }
+    .explanation-content {
+        padding: 1rem;
+        background: rgba(19, 23, 35, 0.75);
+        max-height: 30vh; 
+        overflow-y: auto;
+        font-size: 0.9rem;
+    }
+    .explanation-content h4 { 
+        color: #A971FF;
+        font-weight: 500;
+        font-size: 1.1rem;
+        margin-top: 0;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid rgba(130, 130, 180, 0.1);
+    }
+     .explanation-content p { 
+        margin-bottom: 0.75rem;
+    }
+     .explanation-content p strong { 
+      color: #A971FF;
+      font-weight: 500;
+    }
+     .explanation-content ol,
+     .explanation-content ul {
+        padding-left: 1.5rem; 
+        margin-top: 0.5rem;
+        margin-bottom: 0.75rem;
+        font-size: 0.85em; 
+    }
+     .explanation-content li {
+        margin-bottom: 0.25rem;
+        line-height: 1.5;
+    }
+     .explanation-content .muted-text {
+        font-size: 0.8rem;
+        color: #8A94A6;
+        font-style: italic;
+        margin-top: 0.5rem;
+    }
+
+    /* Label Visibility Group */
+    .label-visibility-group {
+      /* Uses .value-group styles for background, border, padding etc. */
+    }
+    .label-visibility-group .form-check { /* Specific styling for checkboxes in this group */
+        padding: 0.3rem 0.1rem; /* Tighter padding */
+        margin-top: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+    .label-visibility-group .form-check-label {
+        font-size: 0.85rem; /* Slightly smaller label text */
+    }
+
+    /* Controls Panel Toggle Button */
+    .controls-toggle-button {
+        position: absolute;
+        /* top and left are now primarily controlled by inline styles from JS */
+        z-index: 1050; 
+        background-color: rgba(35, 40, 54, 0.85);
+        color: #A971FF;
+        border: 1px solid rgba(168, 121, 255, 0.4);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        padding: 0.4rem 0.6rem; 
+        border-radius: 6px; 
+        cursor: pointer;
+        font-size: 1rem; 
+        line-height: 1;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        transition: background-color 0.2s, left 0.3s ease-in-out, top 0.3s ease-in-out, transform 0.3s ease-in-out;
+    }
+    .controls-toggle-button:hover {
+        background-color: rgba(50, 55, 70, 0.9);
+    }
+
+    /* Default mobile positioning for toggle button if JS doesn't override */
+    @media (max-width: 1023px) {
+        .controls-toggle-button {
+            top: 0.5rem; 
+            left: 0.5rem;
+            transform: none;
+        }
+    }
+
+    /* HTML Integral Explanation Box (Fixed on Canvas) */
+    .integral-explanation-box-html {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      width: 400px; /* Increased width */
+      min-height: 420px; /* Increased min-height */
+      max-height: calc(100% - 2rem); /* Prevent overflow from viewport */
+      padding: 1rem;
+      background: rgba(16, 19, 28, 0.92); 
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(168, 121, 255, 0.25);
+      border-radius: 0.65rem;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+      color: #E8EEFF;
+      font-family: 'SF Pro Rounded', SF Pro Display, Cambria, 'Times New Roman', serif;
+      font-size: 18px; /* Increased base font size */
+      line-height: 1.65; /* Adjusted line height */
+      overflow-y: auto;
+      z-index: 10; 
+    }
+    .integral-explanation-box-html::before { /* Top border gradient */
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, 
+            rgba(128, 140, 156, 0) 0%, 
+            rgba(168, 121, 255, 0.3) 25%, 
+            rgba(168, 121, 255, 0.3) 75%, 
+            rgba(128, 140, 156, 0) 100%);
+        z-index: 1;
+    }
+    .integral-explanation-box-html::after { /* Dot pattern and glows */
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image:
+            radial-gradient(rgba(255, 255, 255, 0.0627) 0.8px, transparent 0.8px), 
+            radial-gradient(circle at 15% 85%, rgba(168, 121, 255, 0.08), transparent 25%), 
+            radial-gradient(circle at 85% 15%, rgba(66, 133, 244, 0.06), transparent 25%); 
+        background-size: 24px 24px, 100% 100%, 100% 100%;
+        pointer-events: none;
+        z-index: -1; 
+        border-radius: inherit;
+    }
+
+    .integral-explanation-box-content {
+      position: relative; 
+      z-index: 2;
+    }
+    .integral-explanation-box-html ol {
+      list-style-position: outside;
+      padding-left: 1.75em; 
+      margin: 0;
+    }
+    .integral-explanation-box-html li {
+      margin-bottom: 0.8em; 
+    }
+    .integral-explanation-box-html li strong {
+      font-weight: 500;
+      color: #E0E7FF; 
+      display: block;
+      margin-bottom: 0.25em;
+    }
+    .integral-explanation-box-html .sub-item {
+      font-style: italic;
+      margin-left: 0em; 
+      margin-top: 0.1em;
+      margin-bottom: 0.1em;
+      font-size: 0.95em;
+      color: #C9D1FF;
+    }
+    .integral-explanation-box-html .formula-emphasis {
+      font-style: italic;
+      font-weight: bold;
+      color: #a971ff; 
+      font-size: 20px; /* Increased formula emphasis font size */
+      display: block;
+      margin-top: 0.5em;
+      text-align: center;
+    }
+    
+    /* For d3-zoom cursor in Custom Proofs */
+    .dragging, .dragging * { cursor: grabbing !important; }
+    .custom-proofs-canvas-wrapper svg { cursor: grab; }
+    .custom-proofs-canvas-wrapper svg.dragging-object, 
+    .custom-proofs-canvas-wrapper svg.dragging-object * { 
+        cursor: grabbing !important; 
+    }
+    .custom-proofs-canvas-wrapper svg.cursor-crosshair {
+      cursor: crosshair;
+    }
+     .custom-proofs-canvas-wrapper svg .cursor-pointer {
+      cursor: pointer;
+    }
+    .custom-proofs-canvas-wrapper svg .cursor-move {
+      cursor: move;
+    }
+
+
+    /* Custom Proofs Integration Styles */
+    .custom-proofs-wrapper {
+      flex-grow: 1;
+      display: flex;
+      overflow: hidden;
+      min-height: 0; /* Important for flex children in a flex column */
+    }
+
+    .custom-proofs-main-layout {
+      display: flex;
+      flex-grow: 1;
+      gap: 1rem;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .custom-proofs-controls-panel-wrapper,
+    .custom-proofs-properties-panel-wrapper {
+      flex-shrink: 0;
+      max-height: 100%;
+      display: flex; /* To make the inner .card take full height */
+    }
+    .custom-proofs-controls-panel-wrapper > .card,
+    .custom-proofs-properties-panel-wrapper > .card {
+        width: 100%; /* Card fills its wrapper */
+        margin-bottom: 0; /* Override default card margin */
+    }
+
+
+    .custom-proofs-controls-panel-wrapper {
+      width: 20rem; /* Adjust as needed */
+    }
+
+    .custom-proofs-properties-panel-wrapper {
+      width: 22rem; /* Adjust as needed */
+    }
+    
+    .custom-proofs-canvas-wrapper {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column; /* To make canvas fill height */
+      min-width: 0;
+      max-height: 100%;
+    }
+    .custom-proofs-canvas-wrapper .card { /* If canvas is wrapped in a card */
+        flex-grow: 1;
+        margin-bottom: 0;
+    }
+    .custom-proofs-canvas-wrapper .card .card-body {
+        padding:0; /* Remove padding if canvas is in a card body */
+    }
+    .custom-proofs-canvas-container { /* Direct container for the SVG if not using a card */
+        flex-grow: 1;
+        background-color: var(--canvas-bg-color, #0a0c10); /* Match drawing canvas background or make it transparent */
+        border-radius: 0.5rem; /* Match card rounding */
+        overflow: hidden; /* Clip SVG if it tries to overflow */
+        border: 1px solid rgba(130, 130, 180, 0.15); /* Match card border */
+         position: relative; /* For SVG positioning or overlays if needed */
+    }
+     .custom-proofs-canvas-container svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Styling for buttons inside custom-proofs panels */
+    .custom-proofs-panel-button {
+        display: flex; /* Align icon and text */
+        align-items: center;
+        width: 100%;
+        text-align: left;
+        padding: 0.5rem 0.75rem;
+        margin-bottom: 0.25rem;
+        border-radius: 0.375rem;
+        background-color: rgba(30, 35, 50, 0.7);
+        color: #e0e7ff;
+        border: 1px solid rgba(130, 130, 180, 0.2);
+        transition: background-color 0.2s, border-color 0.2s;
+        font-size: 0.9rem;
+    }
+    .custom-proofs-panel-button:hover:not(:disabled) {
+        background-color: rgba(40, 45, 60, 0.8);
+        border-color: rgba(168, 121, 255, 0.3);
+    }
+    .custom-proofs-panel-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    .custom-proofs-panel-button.active {
+        background-color: rgba(168, 121, 255, 0.2);
+        border-color: rgba(168, 121, 255, 0.4);
+        color: #a971ff;
+    }
+    .custom-proofs-panel-button svg {
+      margin-right: 0.65rem;
+      width: 1.1em; /* Control icon size */
+      height: 1.1em;
+      flex-shrink: 0;
+    }
+     .custom-proofs-panel-button.delete-button {
+        background-color: rgba(176, 55, 55, 0.7); /* Muted red */
+        border-color: rgba(176, 55, 55, 0.3);
+        color: #ffe0e0;
+    }
+    .custom-proofs-panel-button.delete-button:hover:not(:disabled) {
+        background-color: rgba(200, 60, 60, 0.8);
+        border-color: rgba(200, 60, 60, 0.4);
+    }
+
+    /* Styling for SliderInput component in Custom Proofs */
+    .custom-proofs-slider-container .form-label { /* Target the label part */
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.35rem; /* Tighter margin */
+        font-size: 0.85rem; /* Smaller label */
+    }
+     .custom-proofs-slider-container .form-label.disabled {
+         color: rgba(255,255,255,0.4);
+     }
+
+    .custom-proofs-slider-container input[type="range"] {
+        /* Inherits global range styles, no need to repeat unless overriding */
+        margin-top: 0.1rem;
+    }
+    .custom-proofs-play-pause-button {
+        background: transparent;
+        border: none;
+        color: #a971ff;
+        padding: 0.2rem;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .custom-proofs-play-pause-button:hover {
+        background: rgba(168, 121, 255, 0.15);
+    }
+    .custom-proofs-play-pause-button svg {
+      width: 0.9em;
+      height: 0.9em;
+    }
+    
+    /* Minor text in properties panel */
+    .custom-proofs-properties-panel-wrapper .text-xs {
+        font-size: 0.75rem; /* Ensure Tailwind 'xs' is small enough or override */
+        color: #b0b8c8;
+        line-height: 1.4;
+    }
+     .custom-proofs-properties-panel-wrapper .text-xs.text-blue-600 { /* Example of overriding a tailwind color */
+        color: #7facff; /* Main app's blue */
+     }
+     .custom-proofs-properties-panel-wrapper .text-xs.text-red-500 {
+         color: #ff7070; /* Main app's red */
+     }
+
+     .custom-proofs-properties-panel-wrapper .form-checkbox {
+         /* Using global .form-check-input styles */
+         width: 0.9em; height: 0.9em; margin-right: 0.4rem;
+     }
+      .custom-proofs-properties-panel-wrapper .space-y-1 > label { margin-bottom: 0.25rem;}
+      .custom-proofs-properties-panel-wrapper .space-y-2 > div { margin-bottom: 0.5rem;}
+      .custom-proofs-properties-panel-wrapper .space-y-3 > div { margin-bottom: 0.75rem;}
+
+      /* Ensure card-body in custom proof panels are scrollable */
+      .custom-proofs-controls-panel-wrapper > .card > .card-body,
+      .custom-proofs-properties-panel-wrapper > .card > .card-body {
+          padding: 0.85rem; /* Slightly less padding if panels are dense */
+      }
+
+
+      @media (max-width: 1023px) {
+        .custom-proofs-main-layout {
+            flex-direction: column;
+        }
+        .custom-proofs-controls-panel-wrapper,
+        .custom-proofs-properties-panel-wrapper {
+            width: 100%;
+            max-height: 35vh; /* Limit height on mobile */
+            margin-bottom: 1rem;
+        }
+        .custom-proofs-canvas-wrapper {
+             min-height: 250px; /* Ensure canvas has some height */
+        }
+     }
+
+
+  </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.1.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "d3-zoom": "https://esm.sh/d3-zoom@^3.0.0",
+    "d3-selection": "https://esm.sh/d3-selection@^3.0.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
