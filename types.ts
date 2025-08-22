@@ -12,7 +12,7 @@ export interface TrigValues {
   cot: number;
 }
 
-export type SceneType = 'trigonometry' | 'hyperbolic_functions' | 'natural_exponential_proof' | 'geometric_area_proof' | 'custom_proofs';
+export type SceneType = 'trigonometry' | 'hyperbolic_functions' | 'natural_exponential_proof' | 'geometric_area_proof' | 'custom_proofs' | 'secant_integral_proof';
 
 export interface HyperbolicValues {
   rho: number;
@@ -85,7 +85,22 @@ export type GeometricAreaProofLabelKey =
 // Placeholder for Custom Proofs labels, if any are managed by the main app's controls
 export type CustomProofsLabelKey = never; // No specific labels for custom proofs managed by main panel
 
-export type LabelKey = TrigLabelKey | HyperbolicLabelKey | NaturalExponentialLabelKey | GeometricAreaProofLabelKey | CustomProofsLabelKey;
+export type LabelKey = TrigLabelKey | HyperbolicLabelKey | NaturalExponentialLabelKey | GeometricAreaProofLabelKey | CustomProofsLabelKey | SecantIntegralProofLabelKey;
+
+
+export type SecantIntegralProofLabelKey =
+  'axesXYO' |
+  'unitHyperbola' |
+  'referenceUnitCircle' |
+  'constructionLines' |
+  'labels' | // for sec, tan, P, alpha
+  'hyperbolicArea' | // for the dotted area P/2
+  'differentialTriangle' | // for the dP/2 area
+  'areaCalculationDetails' |
+  'finalFormula';
+
+
+
 
 export interface SceneLabelVisibility {
   trigonometry: Partial<Record<TrigLabelKey, boolean>>;
@@ -93,6 +108,7 @@ export interface SceneLabelVisibility {
   natural_exponential_proof: Partial<Record<NaturalExponentialLabelKey, boolean>>;
   geometric_area_proof: Partial<Record<GeometricAreaProofLabelKey, boolean>>;
   custom_proofs: Partial<Record<CustomProofsLabelKey, boolean>>;
+  secant_integral_proof: Partial<Record<SecantIntegralProofLabelKey, boolean>>;
 }
 
 export interface LabelConfigItem<T extends LabelKey> {

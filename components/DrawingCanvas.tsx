@@ -10,7 +10,7 @@ import { TrigonometryScene } from './scenes/TrigonometryScene';
 import { HyperbolicScene } from './scenes/HyperbolicScene';
 import { NaturalExponentialProofScene } from './scenes/NaturalExponentialProofScene';
 import { GeometricAreaProofScene } from './scenes/GeometricAreaProofScene';
-
+import { SecantIntegralProofScene } from './scenes/SecantIntegralProofScene';
 
 interface DrawingCanvasProps {
   angleDegrees: number;
@@ -313,6 +313,15 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
             visibleLabels={visibleLabels.geometric_area_proof}
           />
         )}
+
+        {currentSceneId === 'secant_integral_proof' && (
+          <SecantIntegralProofScene
+            {...commonSceneProps}
+            R_hp={R_hp}
+            visibleLabels={visibleLabels.secant_integral_proof}
+          />
+        )}
+        
       </svg>
       {showIntegralBox && (
         <div className="integral-explanation-box-html" role="document" aria-label="Integral Explanation">

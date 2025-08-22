@@ -1,4 +1,4 @@
-import { SceneConfig, SceneType, LabelConfigItem, TrigLabelKey, HyperbolicLabelKey, NaturalExponentialLabelKey, GeometricAreaProofLabelKey, SceneLabelVisibility, GeometricAreaProofValues, CustomProofsLabelKey } from './types';
+import { SceneConfig, SceneType, LabelConfigItem, TrigLabelKey, HyperbolicLabelKey, NaturalExponentialLabelKey, GeometricAreaProofLabelKey, SceneLabelVisibility, GeometricAreaProofValues, CustomProofsLabelKey, SecantIntegralProofLabelKey } from './types';
 
 export const APP_TITLE = "Interactive Geometric Visualizer"; 
 export const INITIAL_ANGLE_DEGREES = 45;
@@ -257,6 +257,26 @@ export const SCENES: SceneConfig[] = [
     }
   },
   {
+    id: 'secant_integral_proof',
+    title: 'Proof: ∫sec(α)dα',
+    descriptionHTML: `A pure geometric proof of the integral of secant, derived by relating a trigonometric angle <strong>α</strong> to a hyperbolic area parameter <strong>P</strong>.`,
+    paramLabel: 'Angle (α)',
+    paramUnit: '°',
+    sliderMin: 0.1,
+    sliderMax: 89.5, // Avoid asymptote
+    sliderStep: 0.1,
+    defaultParamValue: 35,
+    detailedExplanationHTML: `
+      <p class="form-text">This proof beautifully connects circular trigonometry with hyperbolic geometry.</p>
+      <ol>
+        <li><strong>The Connection:</strong> A point <strong>P</strong> on the unit hyperbola <strong>x² - y² = 1</strong> is defined. From a trigonometric view, its coordinates are <strong>(sec α, tan α)</strong>.</li>
+        <li><strong>The Area Parameter:</strong> From a hyperbolic view, the same point is <strong>(cosh P, sinh P)</strong>, where <strong>P/2</strong> is the area of the hyperbolic sector from the vertex (1,0) to P.</li>
+        <li><strong>The Infinitesimal Area:</strong> The core of the proof is calculating the area of the tiny triangle <strong>ΔOPP'</strong> (labeled <strong>dP/2</strong>) formed by a small change in angle, <strong>dα</strong>. Using geometric approximations and the identity sec²α - tan²α = 1, this area is shown to be <strong>dP/2 = ½ sec(α) dα</strong>.</li>
+        <li><strong>The Result:</strong> This directly gives <strong>dP = sec(α) dα</strong>. Integrating both sides gives <strong>P = ∫sec(α)dα</strong>. We also know from hyperbolic identities that <strong>P = ln(sec α + tan α)</strong>. Equating these gives the final result.</li>
+      </ol>
+    `
+  },
+  {
     id: 'custom_proofs',
     title: 'Custom Proofs',
     descriptionHTML: `Create and interact with your own geometric constructions. This section uses a separate interface.`,
@@ -322,6 +342,18 @@ export const GEOMETRIC_AREA_PROOF_LABEL_CONFIG: LabelConfigItem<GeometricAreaPro
   { key: 'integralExplanationText', displayName: 'Integral Explanation Text Box' },
 ];
 
+export const SECANT_INTEGRAL_PROOF_LABEL_CONFIG: LabelConfigItem<SecantIntegralProofLabelKey>[] = [
+  { key: 'axesXYO', displayName: 'Show Axes & Origin' },
+  { key: 'unitHyperbola', displayName: 'Show Unit Hyperbola' },
+  { key: 'referenceUnitCircle', displayName: 'Show Reference Unit Circle' },
+  { key: 'constructionLines', displayName: 'Show Construction Lines' },
+  { key: 'labels', displayName: 'Show sec, tan, α, P Labels' },
+  { key: 'hyperbolicArea', displayName: 'Show Hyperbolic Area (P/2)' },
+  { key: 'differentialTriangle', displayName: 'Show Infinitesimal Area (dP/2)' },
+  { key: 'areaCalculationDetails', displayName: 'Show Area Calculation Proof' },
+  { key: 'finalFormula', displayName: 'Show Final Formula' },
+];
+
 export const CUSTOM_PROOFS_LABEL_CONFIG: LabelConfigItem<CustomProofsLabelKey>[] = []; // No labels for custom proofs managed by main panel
 
 export const SCENE_LABEL_CONFIGS: Record<SceneType, LabelConfigItem<any>[]> = {
@@ -329,6 +361,7 @@ export const SCENE_LABEL_CONFIGS: Record<SceneType, LabelConfigItem<any>[]> = {
   hyperbolic_functions: HYPERBOLIC_LABEL_CONFIG,
   natural_exponential_proof: NATURAL_EXPONENTIAL_LABEL_CONFIG,
   geometric_area_proof: GEOMETRIC_AREA_PROOF_LABEL_CONFIG,
+  secant_integral_proof: SECANT_INTEGRAL_PROOF_LABEL_CONFIG,
   custom_proofs: CUSTOM_PROOFS_LABEL_CONFIG,
 };
 
@@ -378,6 +411,17 @@ export const DEFAULT_LABEL_VISIBILITY: SceneLabelVisibility = {
     label_BC_arcSecDTheta: true,
     label_BprimeC_dSecTheta: true,     
     integralExplanationText: false, // Changed from true to false
+  },
+  secant_integral_proof: {
+    axesXYO: true,
+    unitHyperbola: true,
+    referenceUnitCircle: true,
+    constructionLines: true,
+    labels: true,
+    hyperbolicArea: true,
+    differentialTriangle: true,
+    areaCalculationDetails: true,
+    finalFormula: true,
   },
   custom_proofs: {}, // Custom proofs manages its own visibility internally
 };
